@@ -1,0 +1,1 @@
+scp -P 65022 result_map_gpt4v.json aigc@36.133.178.12:/data/aigc/sr/projects
