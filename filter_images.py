@@ -11,12 +11,11 @@ import tqdm
 parser = argparse.ArgumentParser()
 THRESHOLD_PERCENT=0.5
 
-parser.add_argument("-s", "--source_dir", type=str, default="/home/starmage/data_pipeline/scored")
-parser.add_argument("-d", "--dest_dir", type=str, default="/home/starmage/data_pipeline/filtered")
+parser.add_argument("-i", "--input_dir", type=str, default="/home/starmage/data_pipeline/scored")
+parser.add_argument("-o", "--output_dir", type=str, default="/home/starmage/data_pipeline/filtered")
 args = parser.parse_args()
-scored_images_dir = Path(args.source_dir) 
-filtered_images_dir = Path(args.dest_dir)
-filtered_images_dir.mkdir(exist_ok=True,parents=True)
+scored_images_dir = Path(args.input_dir) 
+filtered_images_dir = Path(args.output_dir)
 scores = []
 full_paths = []
 for f in os.listdir(scored_images_dir):
