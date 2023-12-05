@@ -113,10 +113,7 @@ class Score():
             print(f"无法处理文件 {img_path}: {e}")
             return 0
             
-    def predict(self,src_dir,rst_dir,aspect_limit=2,threshold=4.5):
-        if os.path.exists(rst_dir):
-            shutil.rmtree(rst_dir)
-        os.makedirs(rst_dir)        
+    def predict(self,src_dir,rst_dir,aspect_limit=2,threshold=4.5):     
         executor = ThreadPoolExecutor(max_workers=16)   
         files = os.listdir(src_dir)
         futures=[]
