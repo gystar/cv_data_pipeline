@@ -69,10 +69,10 @@ def normalized(a, axis=-1, order=2):
     return a / np.expand_dims(l2, axis)
 
 class Score():
-    def __init__(self):
+    def __init__(self, device="cuda"):
         torch.manual_seed(2618)
         # set device
-        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        self.device = device
         # set mlp
         model = MLP(768)
         curren_dir = Path(__file__).parent
