@@ -75,7 +75,8 @@ class Score():
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         # set mlp
         model = MLP(768)
-        s = torch.load("/home/starmage/data_pipeline/components/score/sac+logos+ava1-l14-linearMSE.pth", map_location=self.device)
+        curren_dir = Path(__file__).parent
+        s = torch.load(curren_dir / "./sac+logos+ava1-l14-linearMSE.pth", map_location=self.device)
         model.load_state_dict(s)
         self.model = model.to(self.device)
         self.model.eval()
