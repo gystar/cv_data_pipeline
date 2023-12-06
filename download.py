@@ -58,7 +58,7 @@ class Downloader:
 
     def download(self, url, id, retry_times, timeout=5):
         try:
-            response = requests.get(url, timeout=timeout, proxies={"http":"http://127.0.0.1:7890/", "https":"http://127.0.0.1:7890/"})
+            response = requests.get(url, timeout=timeout)#, proxies={"http":"http://127.0.0.1:7890/", "https":"http://127.0.0.1:7890/"})
             if response.status_code == 200:                             
                 return id,response.content
             else:
@@ -121,33 +121,39 @@ class Downloader:
             
 if __name__ =="__main__":               
     parser = argparse.ArgumentParser()
-    parser.add_argument("-d", "--save_dir", type=str, default="/mnt/data1/laion_coco")
-    parser.add_argument("-b", "--block_index", type=int)
+    parser.add_argument("-i", "--input_csv_dir", type=str, default="/data0/en/csv")
+    parser.add_argument("-o", "--output_dir", type=str, required=True)    
+    parser.add_argument("-b", "--block_index", type=str, required=True)
     # 支持断线重新下载，会在目标文件夹中找到序号最大的文件作为起始点继续下载
     parser.add_argument("-r", "--resume", type=bool, default=True) 
     args = parser.parse_args()
 
-    save_dir = Path(args.save_dir)
+    output_dir = Path(args.output_dir)
+    
+    image_dir=output_dir / f"images/chunk_{args.block_index}"
+    image_dir.mkdir(parents=True, exist_ok=True)
 
     resume_from = 0
     if args.resume:
-        files=os.listdir(save_dir)
-        ids = [int(f.split(".")[0]) for f in files]
-        resume_from = max(ids)
+        try:
+            files=os.listdir(image_dir)
+            ids = [int(f.split(".")[0]) for f in files]
+            resume_from = max(ids)
+        except:
+            resume_from = 0
 
-    log_dir = save_dir / "logs"
+    log_dir = output_dir / "logs"
     log_dir.mkdir(parents=True, exist_ok=True)
     setup_log(log_dir/f"{args.block_index}.log")
     
-    df = pd.read_csv(save_dir / f"csv/{args.block_index}_parquet.csv")  
-    LOGGER.info(f"dataset size: {len(df)-args.resume_from}")
+    df = pd.read_csv(Path(args.input_csv_dir) / f"{args.block_index}_parquet.csv")  
+    LOGGER.info(f"dataset size: {len(df)-resume_from}")
 
 
     # %%  
-    image_dir=save_dir / f"images/chunk_{args.block_index}"
-    image_dir.mkdir(parents=True, exist_ok=True)
-    urls = df.URL.tolist()[args.resume_from:]
-    ids = df.index.tolist()[args.resume_from:]
+ 
+    urls = df.URL.tolist()[resume_from:]
+    ids = df.index.tolist()[resume_from:]
     # 删除df节约内存
     del df
     df = None    
