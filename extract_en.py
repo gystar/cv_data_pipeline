@@ -90,6 +90,7 @@ def convert(args):
     #     dataset = load_from_disk(args.original_dataset_name_or_path)
     # else:
     #     dataset = load_dataset(args.original_dataset_name_or_path)
+    print("Reading csv infomation...")
     df_info = pd.read_csv(args.csv_path, usecols=[0, 1])
     
     # paths
