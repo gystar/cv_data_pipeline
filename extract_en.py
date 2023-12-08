@@ -91,6 +91,14 @@ def convert(args):
     # else:
     #     dataset = load_dataset(args.original_dataset_name_or_path)
     df_info = pd.read_csv(args.csv_path, usecols=[0, 1])
+    
+    # paths
+    work_dir = Path(args.work_dir)
+    input_dir = Path(args.images_dir)
+    output_dir = work_dir/f"output/{str(input_dir.name)}"
+    cache_dir = work_dir/f"cache/{str(input_dir.name)}"
+    output_dir.mkdir(parents=True,exist_ok=True)
+    cache_dir.mkdir(parents=True,exist_ok=True)
 
     if args.split is not None:
         df_info = df_info[args.split]
@@ -101,29 +109,28 @@ def convert(args):
         AutoencoderKL.from_pretrained(
             args.vae_model_path,
             subfolder="unet",
-            cache_dir=args.cache_dir,
+            cache_dir=cache_dir,
         )
         .to(args.dtype)
         .cuda()
     )  
-    ds = Dataset.from_generator( get_new_dataset_generator(df_info, Path(args.images_dir), vae_transform_fn, vae, args), cache_dir=args.cache_dir,  num_proc=args.num_proc )
+    ds = Dataset.from_generator( get_new_dataset_generator(df_info, input_dir, vae_transform_fn, vae, args), cache_dir=cache_dir,  num_proc=args.num_proc )
 
-    ds.save_to_disk(args.output_dataset_path)
+    ds.save_to_disk(output_dir)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--output_dataset_path", default="./output/chunk_0")
     parser.add_argument("--vae_model_path", default="./sdxl_vae_fp16fix")
     parser.add_argument("--images_dir", default="./images/chunk_0")
+    parser.add_argument("--work_dir", default="./")
     parser.add_argument("--csv_path", default="./csv/0_parquet.csv")
     parser.add_argument("--split", default=None)
     parser.add_argument("--image_resolution", default=512, type=int)
     parser.add_argument("--image_center_crop", default=True)
     parser.add_argument("--image_random_flip", default=True)
-    parser.add_argument("--cache_dir", default="./cache/chunk_0")
     parser.add_argument("--dtype", default="fp16")
-    parser.add_argument("--num_proc", default=4, type=int)
+    parser.add_argument("--num_proc", default=3, type=int)
     parser.add_argument("--batch_size", default=2, type=int)
     args = parser.parse_args()
 
