@@ -69,7 +69,8 @@ def get_new_dataset_generator(
                 target_sizes.append(target_size)
 
             if len(caps) > 0: 
-                features = features[1:].to(device="cuda",dtype=torch.float16)
+                features = features[1:].to(device=args.device,dtype=torch.float16)
+                print(f"features size: {len(features)}, {features.numel()}")
                 with torch.no_grad():
                     features = vae.encode(features).latent_dist.parameters.detach().to("cpu")         
                        
@@ -90,7 +91,7 @@ def convert(args):
     #     dataset = load_from_disk(args.original_dataset_name_or_path)
     # else:
     #     dataset = load_dataset(args.original_dataset_name_or_path)
-    print("Reading csv infomation...")
+    print("Reading csv information...")
     df_info = pd.read_csv(args.csv_path, usecols=[0, 1])
     
     # paths
@@ -112,8 +113,7 @@ def convert(args):
             subfolder="unet",
             cache_dir=cache_dir,
         )
-        .to(args.dtype)
-        .cuda()
+        .to(device = args.device, dtype= args.dtype)
     )  
     ds = Dataset.from_generator( get_new_dataset_generator(df_info, input_dir, vae_transform_fn, vae, args), cache_dir=cache_dir,  num_proc=args.num_proc )
 
@@ -131,8 +131,9 @@ if __name__ == "__main__":
     parser.add_argument("--image_center_crop", default=True)
     parser.add_argument("--image_random_flip", default=True)
     parser.add_argument("--dtype", default="fp16")
-    parser.add_argument("--num_proc", default=3, type=int)
-    parser.add_argument("--batch_size", default=2, type=int)
+    parser.add_argument("--num_proc", default=16, type=int)
+    parser.add_argument("--batch_size", default=256, type=int)
+    parser.add_argument("--device", default="cuda:0", type=str)
     args = parser.parse_args()
 
     if args.dtype.lower() in ["fp16", "float16"]:
