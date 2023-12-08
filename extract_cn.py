@@ -152,7 +152,7 @@ if __name__ == '__main__':
     parser.add_argument("--image_random_flip", default=True)
     parser.add_argument("--dtype", default="fp16")
     parser.add_argument("--num_proc", default=16, type=int)
-    parser.add_argument("--batch_size", default=2, type=int)
+    parser.add_argument("--batch_size", default=128, type=int)
     parser.add_argument("--device", default="cuda:0", type=str)
     parser.add_argument("--threshold", default=0.5, type=float)
     args = parser.parse_args()
