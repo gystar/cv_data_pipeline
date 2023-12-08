@@ -5,6 +5,7 @@ sys.path.append(".")  # 这里将scripts目录的父目录添加到路径中
 import os
 
 import pandas as pd
+import numpy as np
 
 # 获取当前脚本的绝对路径
 script_path = os.path.abspath(__file__)
@@ -22,6 +23,8 @@ from pathlib import Path
 from train.utils import preprocess_train_image_fn
 from PIL import Image
 
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
 
 def get_image_name(id, url):  # id为csv中编号
     subfix = url.split(".")[-1]
@@ -33,32 +36,42 @@ def get_image_name(id, url):  # id为csv中编号
 def get_new_dataset_generator(
     dataset: pd.DataFrame, images_dir: Path, vae_transform_fn, vae, args
 ):
-    def sample_generator():        
-        for i in range(0, len(dataset), args.batch_size):
-            last = min(i + args.batch_size, len(dataset))
-            urls = dataset.iloc[i:last]["URL"]           
-            caps,features, original_sizes, crop_top_lefts, target_sizes = [],[], [], [], []            
-            for j,url in  enumerate(urls):                
-                filename = get_image_name(i, url)
-                file_path = images_dir / filename
-                if not file_path.exists():
-                    continue
+    def sample_generator():   
+        pool = ThreadPoolExecutor(max_workers=32)
+        for batch_start in range(0, len(dataset), args.batch_size):
+            last = min(batch_start + args.batch_size, len(dataset))
+            urls = dataset.iloc[batch_start:last]["URL"]     
+            def open_and_transfrom(path, cap):
                 try:
-                    image = Image.open(file_path)
+                    image = Image.open(path)
                     with torch.no_grad():
-                        image, original_size, crop_top_left, target_size = vae_transform_fn(image)
-                    #feature = image.unsqueeze(0)
-                    caps.append(dataset.iloc[i:last]["TEXT"].to_list()[j])
-                    features.append(image)
-                    original_sizes.append(original_size)
-                    crop_top_lefts.append(crop_top_left)
-                    target_sizes.append(target_size)
+                        return cap, vae_transform_fn(image)
                 except Exception as e:
                     print(e)
+                    return None,(None,None,None,None)
+            futures = []  #小文件太多如果一个个打开会浪费时间,使用线程池  
+            caps,features, original_sizes, crop_top_lefts, target_sizes = [],torch.zeros((1,3,512,512)), [], [], []            
+            for cur,url in  enumerate(urls):                
+                filename = get_image_name(batch_start+cur, url)
+                file_path = images_dir / filename
+                if not file_path.exists():
+                    continue  
+                futures.append(pool.submit(open_and_transfrom, file_path,dataset.iloc[batch_start+cur]["TEXT"]))                     
+                    
+            for future in as_completed(futures):
+                cap, (image, original_size, crop_top_left, target_size) = future.result() 
+                if cap is None:
                     continue
-            if len(features) > 0:
-                features = torch.tensor( [f.numpy() for f in features], device="cuda",dtype=torch.float16)
-                features= list(vae.encode(features).latent_dist.parameters.detach().to("cpu"))           
+                caps.append(cap)
+                features = torch.concat([features, image.unsqueeze(0)],dim=0)   
+                original_sizes.append(original_size)
+                crop_top_lefts.append(crop_top_left)
+                target_sizes.append(target_size)
+
+            if len(caps) > 0: 
+                features = features[1:].to(device="cuda",dtype=torch.float16)
+                with torch.no_grad():
+                    features = vae.encode(features).latent_dist.parameters.detach().to("cpu")         
                        
                 for k in range(len(features)):
                     yield {
@@ -110,7 +123,7 @@ if __name__ == "__main__":
     parser.add_argument("--image_random_flip", default=True)
     parser.add_argument("--cache_dir", default="./cache/chunk_0")
     parser.add_argument("--dtype", default="fp16")
-    parser.add_argument("--num_proc", default=None, type=int)
+    parser.add_argument("--num_proc", default=4, type=int)
     parser.add_argument("--batch_size", default=2, type=int)
     args = parser.parse_args()
 
