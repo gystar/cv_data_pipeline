@@ -3,3 +3,7 @@ images
 .vscode
 scored
 filtered
+csv
+cache
+logs
+output

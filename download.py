@@ -58,7 +58,7 @@ class Downloader:
 
     def download(self, url, id, retry_times, timeout=5):
         try:
-            response = requests.get(url, timeout=timeout)#, proxies={"http":"http://127.0.0.1:7890/", "https":"http://127.0.0.1:7890/"})
+            response = requests.get(url, timeout=timeout, proxies={"http":"http://127.0.0.1:7890/", "https":"http://127.0.0.1:7890/"})
             if response.status_code == 200:                             
                 return id,response.content
             else:
