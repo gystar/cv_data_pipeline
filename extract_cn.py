@@ -24,34 +24,6 @@ from PIL import Image
 
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-def get_new_dataset_generator(images_dir:Path , vae_transform_fn, vae, dtype):
-    def sample_generator():
-        with torch.no_grad():
-            for file in  os.listdir(images_dir):
-                caption = file.split("0")[0]
-                image_path = images_dir / file               
-                try:
-                    image = Image.open(image_path)
-                    image, original_size, crop_top_left, target_size = vae_transform_fn(image)
-                    image = image.unsqueeze(0)
-                    image = image.to(dtype)
-                    image = image.cuda()
-                    image_feature = vae.encode(image).latent_dist.parameters[0].to("cpu")
-                    
-                    yield {
-                        "caption": caption,
-                        "image_feature": image_feature,
-                        "original_size": original_size,
-                        "crop_top_left": crop_top_left,
-                        "target_size": target_size,
-                    }
-                except Exception as e:
-                    print(f"{e}")
-                    with open('error.txt', 'a') as f:
-                        f.write(f"{file}\n")
-                    #print('error')
-                    continue
-    return sample_generator
 
 def get_new_dataset_generator(
     images_dir: Path, vae_transform_fn, vae, args
@@ -152,7 +124,7 @@ if __name__ == '__main__':
     parser.add_argument("--image_random_flip", default=True)
     parser.add_argument("--dtype", default="fp16")
     parser.add_argument("--num_proc", default=16, type=int)
-    parser.add_argument("--batch_size", default=128, type=int)
+    parser.add_argument("--batch_size", default=32, type=int)
     parser.add_argument("--device", default="cuda:0", type=str)
     parser.add_argument("--threshold", default=0.5, type=float)
     args = parser.parse_args()
